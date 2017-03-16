@@ -1,0 +1,174 @@
+#!/usr/bin/env python
+import OpenSSL
+import sys, getopt
+import socket
+import urlparse
+
+long_options = [
+    "tlsv1.0",
+    "tlsv1.1",
+    "tlsv1.2",
+    "sslv3",
+    "ciphers=",
+    "crlfile=",
+    "cacert=",
+    "allow-stale-certs=",
+    "pinnedcertificate="
+]
+
+short_options = "3"
+CRLF = "\r\n\r\n"
+
+def parse_url(url):
+    u = urlparse.urlparse(url)
+    scheme = u.scheme
+
+
+    host = u.netloc
+    port = 443
+    if ":" in host:
+        host, port = host.split(":")
+        port = int(port)
+    
+    index = url.find(u.netloc) + len(u.netloc)
+    request_uri = url[index:] 
+
+    
+    return scheme, host, port, request_uri
+
+def scurl(url, opts): 
+    print "scurl: %s" % url 
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    scheme, host, port, request_uri = parse_url(url) 
+    print scheme, host, port, request_uri
+
+    request = "Get %s HTTP/1.0%s" % (request_uri, CRLF)
+    print "Request: %s" % request 
+
+    if scheme != "https":
+        print >> sys.stderr, "URL scheme must be HTTPS"
+        sys.exit(1)
+
+    ctx = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
+
+    for opt, args in opts:
+        pass
+
+    conn = OpenSSL.SSL.Connection(ctx, s)
+     
+    conn.connect((host, port))
+    print "Connection: on %s, %d " % (host,  port)
+
+    #Handshake 
+    print "Doing handshake ..."
+    conn.do_handshake()
+    conn.sendall(request)
+    data = []
+    try:
+        while 1:
+            string = conn.recv(1024)
+            print string
+            data.append(string)
+    except OpenSSL.SSL.ZeroReturnError:
+        pass
+
+    data = "".join(data)
+    print data
+
+    print "\n\n\n Shutting down..."
+    conn.shutdown()
+    print "Closing connection..."
+    conn.close()
+    print "Connection successfully closed."
+
+# TODO: Received HTTP/1.0 400 Bad Request Error 
+
+def main(argv):
+    try:
+        opts, urls = getopt.getopt(argv, short_options, long_options)
+    except getopt.GetoptError as err:
+        # TODO: print something sensible
+        print str(err)
+        sys.exit(2)
+
+    for url in urls: 
+        scurl(url,opts)
+
+
+
+
+if __name__ == "__main__":
+    # print sys.argv[1:]
+    main(sys.argv[1:])
+
+
+
+    # try:
+    #     opts, urls = getopt.getopt(argv, short_options, long_options)
+    # except getopt.GetoptError as err:
+    #     # TODO: print something sensible
+    #     print str(err)
+    #     sys.exit(2)
+    # for opt, arg in opts:
+    #     if opt == "--tlsv1.0":
+    #         pass
+    #     elif opt == "--tlsv1.1":
+    #         pass
+    #     elif opt == "--tlsv1.2":
+    #         pass
+    #     elif opt == "--sslv3" or opt == "-3":
+    #         pass
+    #     elif opt == "--ciphers":
+    #         pass
+    #     elif opt == "--crlfile":
+    #         pass
+    #     elif opt == "--cacert":
+    #         pass
+    #     elif opt == "--allow-stale-certs":
+    #         pass
+    #     elif opt == "--pinnedcertificate":
+    #         pass
+
+    #     # TODO: handle options
+    #     print "opt [%s] args [%s]" % (opt, arg)
+    # print "remaining args: ", urls
+
+    # TODO: setup session
+    # 1. The SSL or TLS client sends a "client hello" message that lists cryptographic information such as the SSL or
+    # TLS version and, in the client's order of preference, the CipherSuites supported by the client. The message also
+    # contains a random byte string that is used in subsequent computations. The protocol allows for the "client hello"
+    # to include the data compression methods supported by the client.
+
+    # 2. The SSL or TLS server responds with a "server hello" message that contains the CipherSuite chosen by the server
+    #  from the list provided by the client, the session ID, and another random byte string. The server also sends its
+    # digital certificate. If the server requires a digital certificate for client authentication, the server sends a
+    # "client certificate request" that includes a list of the types of certificates supported and the Distinguished
+    # Names of acceptable Certification Authorities (CAs).
+
+    # 3. The SSL or TLS client verifies the server's digital certificate. For more information, see How SSL and TLS
+    # provide identification, authentication, confidentiality, and integrity.
+
+    # 4. The SSL or TLS client sends the random byte string that enables both the client and the server to compute the
+    # secret key to be used for encrypting subsequent message data. The random byte string itself is encrypted with the
+    # server's public key.
+
+    # 5. If the SSL or TLS server sent a "client certificate request", the client sends a random byte string encrypted
+    # with the client's private key, together with the client's digital certificate, or a "no digital certificate
+    # alert". This alert is only a warning, but with some implementations the handshake fails if client authentication
+    # is mandatory.
+
+    # 6. The SSL or TLS server verifies the client's certificate. For more information, see How SSL and TLS provide
+    # identification, authentication, confidentiality, and integrity.
+
+    # 7. The SSL or TLS client sends the server a "finished" message, which is encrypted with the secret key,
+    # indicating that the client part of the handshake is complete.
+
+    # 8. The SSL or TLS server sends the client a "finished" message, which is encrypted with the secret key,
+    # indicating that the server part of the handshake is complete.
+
+    # 9. For the duration of the SSL or TLS session, the server and client can now exchange messages that are
+    # symmetrically encrypted with the shared secret key.
+    # TODO: exchange message
+
+
+    # print SSL.TLSv1_1_METHOD
