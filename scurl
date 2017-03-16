@@ -38,11 +38,13 @@ def parse_url(url):
 
 def scurl(url, opts): 
     print "scurl: %s" % url 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    scheme, host, port, request_uri = parse_url(url) 
-    print scheme, host, port, request_uri
 
-    request = "Get %s HTTP/1.0%s" % (request_uri, CRLF)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    scheme, host, port, request_uri = parse_url(url) 
+    print "Parsed: ", scheme, host, port, request_uri
+
+    request = "GET %s HTTP/1.0%s" % (request_uri, CRLF)
     print "Request: %s" % request 
 
     if scheme != "https":
@@ -67,7 +69,7 @@ def scurl(url, opts):
     try:
         while 1:
             string = conn.recv(1024)
-            print string
+            # print string
             data.append(string)
     except OpenSSL.SSL.ZeroReturnError:
         pass
